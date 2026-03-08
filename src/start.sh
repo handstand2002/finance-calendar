@@ -52,7 +52,8 @@ echo "📝 Logs are being written to: $(pwd)/data/log.txt"
 echo "👉 Open your browser to: http://localhost:8000/calendar/1?edit=true"
 
 # Use nohup to decouple the process from the terminal, redirecting all output to the log file
-nohup uvicorn main:app --host 0.0.0.0 --port 8000 > data/log.txt 2>&1 &
+# Tell Uvicorn it's running behind a proxy subpath
+nohup uvicorn main:app --host 0.0.0.0 --port 8000 --root-path "/finance-calendar" > data/log.txt 2>&1 &
 
 # Print the Process ID of the server we just started
 echo "✅ Server is running! (PID: $!)"
