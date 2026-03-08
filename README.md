@@ -31,8 +31,8 @@ You don't need Docker or a heavy database server to run this. The app uses a sim
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/handstand2002/finance-calendar.git](https://github.com/handstand2002/finance-calendar.git)
-   cd finance-forecast
+   git clone https://github.com/handstand2002/finance-calendar.git
+   cd finance-calendar
 
 ```
 
@@ -46,7 +46,7 @@ chmod +x start.sh
 
 
 3. **Open your browser:**
-Navigate to [http://localhost:8000/calendar/1?edit=true](https://www.google.com/search?q=http://localhost:8000/calendar/1%3Fedit%3Dtrue) to view the app in Edit Mode.
+Navigate to http://localhost:8000/calendar/1?edit=true to view the app in Edit Mode.
 
 *Note: On your very first run, you may need to use a SQLite viewer (like DB Browser for SQLite) to add a dummy account into the `accounts` table so the dropdown has something to load!*
 
