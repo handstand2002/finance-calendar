@@ -138,7 +138,7 @@
 
         // Function to load recurring rules into the table
         window.loadRecurringRules = function() {
-            fetch('/recurring/account/' + currentAccountId)
+            fetch('recurring/account/' + currentAccountId)
             .then(r => r.json())
             .then(rules => {
                 const tbody = document.getElementById('rtxTableBody');
@@ -187,7 +187,7 @@
         // API call to delete a rule
         window.deleteRtx = function(id) {
             if(confirm("Are you sure you want to delete this recurring rule? Future projections will be removed.")) {
-                fetch('/recurring/' + id, { method: 'DELETE' })
+                fetch('recurring/' + id, { method: 'DELETE' })
                 .then(r => {
                     if (r.ok) {
                         loadRecurringRules(); // Refresh table
@@ -209,7 +209,7 @@
                 active: document.getElementById('editRtxActive').checked
             };
 
-            fetch('/recurring/' + id, {
+            fetch('recurring/' + id, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -222,7 +222,7 @@
             });
         });
 
-        fetch('/api/accounts').then(r => r.json()).then(accounts => {
+        fetch('api/accounts').then(r => r.json()).then(accounts => {
             accountSelect.innerHTML = '';
             accounts.forEach(account => {
                 var option = document.createElement('option');
@@ -236,7 +236,7 @@
         accountSelect.addEventListener('change', function() {
             if (this.value) {
                 var editParam = isEditMode ? '?edit=true' : '';
-                window.location.href = '/calendar/' + this.value + editParam;
+                window.location.href = 'calendar/' + this.value + editParam;
             }
         });
 
@@ -244,7 +244,7 @@
         calendar = new FullCalendar.Calendar(calendarEl, {
           initialView: 'dayGridMonth',
           headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
-          events: '/api/calendar-events/' + currentAccountId,
+          events: 'api/calendar-events/' + currentAccountId,
           eventOrder: 'sortOrder',
 
           // Format the text inside the calendar block
@@ -325,11 +325,11 @@
             if (txType === 'TX') {
                 // Update existing transaction
                 var txId = document.getElementById('editTxId').value;
-                fetch('/transactions/' + txId, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
+                fetch('transactions/' + txId, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
                 .then(r => { if(r.ok) { document.getElementById('editModal').style.display='none'; calendar.refetchEvents(); } else alert("Error updating"); });
             } else if (txType === 'EXP') {
                 // Convert expected to actual transaction (creates new)
-                fetch('/transactions/', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
+                fetch('transactions/', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
                 .then(r => { if(r.ok) { document.getElementById('editModal').style.display='none'; calendar.refetchEvents(); } else alert("Error saving"); });
             }
         });
@@ -340,7 +340,7 @@
             if (!txId) return;
 
             if (confirm("Are you sure you want to delete this transaction? This action cannot be undone.")) {
-                fetch('/transactions/' + txId, { 
+                fetch('transactions/' + txId, { 
                     method: 'DELETE' 
                 })
                 .then(r => { 
@@ -360,7 +360,7 @@
                 account: currentAccountId, date: document.getElementById('txDate').value,
                 amount: document.getElementById('txAmount').value, description: document.getElementById('txDesc').value
             };
-            fetch('/transactions/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            fetch('transactions/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
             .then(r => { if(r.ok) { this.reset(); calendar.refetchEvents(); } else alert("Error"); });
         });
 
@@ -370,7 +370,7 @@
                 account: currentAccountId, name: document.getElementById('rtxName').value,
                 amount: document.getElementById('rtxAmount').value, day_of_month: parseInt(document.getElementById('rtxDay').value)
             };
-            fetch('/recurring/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            fetch('recurring/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
             .then(r => { if(r.ok) { this.reset(); calendar.refetchEvents(); loadRecurringRules(); } else alert("Error"); });
         });
 
@@ -389,7 +389,7 @@
                         date: reconDate
                     };
 
-                    fetch('/recon/', {
+                    fetch('recon/', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
