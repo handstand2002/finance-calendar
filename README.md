@@ -33,17 +33,14 @@ You don't need Docker or a heavy database server to run this. The app uses a sim
    ```bash
    git clone https://github.com/handstand2002/finance-calendar.git
    cd finance-calendar
-
-```
+   ```
 
 2. **Run the startup script:**
 We've included a handy bash script that creates a virtual environment, installs dependencies, and boots the server.
-```bash
-chmod +x start.sh
-./start.sh
-
-```
-
+   ```bash
+   chmod +x start.sh
+   ./start.sh
+   ```
 
 3. **Open your browser:**
 Navigate to http://localhost:8000/calendar/1?edit=true to view the app in Edit Mode.
