@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Forecast Calendar</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header-controls { text-align: center; margin-bottom: 20px; }
+        select { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; }
+        #calendar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .fc-event { cursor: pointer; }
+        .forms-wrapper { display: flex; gap: 20px; justify-content: space-between; }
+        .form-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); flex: 1; }
+        .form-box h3 { margin-top: 0; border-bottom: 2px solid #f4f4f9; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        .form-group input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div id="editModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index:1000; width: 300px;">
+        <h3 id="modalTitle" style="margin-top:0;">Edit Transaction</h3>
+        <form id="editForm">
+            <input type="hidden" id="editType">
+            <input type="hidden" id="editTxId">
+            <input type="hidden" id="editRecurringTxId">
+            
+            <div class="form-group"><label>Date</label><input type="date" id="editDate" required></div>
+            <div class="form-group"><label>Amount</label><input type="number" step="0.01" id="editAmount" required></div>
+            <div class="form-group"><label>Description</label><input type="text" id="editDesc" required></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit">Save</button>
+                <button type="button" id="deleteBtn" style="background: #dc3545; display: none;">Delete</button>
+                <button type="button" style="background: #6c757d;" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+            </div>
+
+        </form>
+    </div>
+
+    <div id="editRtxModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index:1000; width: 300px;">
+        <h3 style="margin-top:0;">Edit Recurring Rule</h3>
+        <form id="editRtxForm">
+            <input type="hidden" id="editRtxId">
+            
+            <div class="form-group"><label>Name</label><input type="text" id="editRtxName" required></div>
+            <div class="form-group"><label>Amount</label><input type="number" step="0.01" id="editRtxAmount" required></div>
+            <div class="form-group"><label>Day of Month (1-31)</label><input type="number" min="1" max="31" id="editRtxDay" required></div>
+            <div class="form-group">
+                <label><input type="checkbox" id="editRtxActive"> Active (Uncheck to pause)</label>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit">Save</button>
+                <button type="button" style="background: #6c757d;" onclick="document.getElementById('editRtxModal').style.display='none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="container">
+        <div class="header-controls">
+            <h2>Account Forecast</h2>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px;">
+                <div>
+                    <label for="accountSelect"><strong>Select Account: </strong></label>
+                    <select id="accountSelect">
+                        <option value="">Loading accounts...</option>
+                    </select>
+                </div>
+                
+                {% if is_edit %}
+                <button id="reconBtn" style="background: #28a745; width: auto; padding: 8px 15px;">
+                    ✓ Reconcile Account
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div id='calendar'></div>
+
+{% if is_edit %}
+        <div class="forms-wrapper">
+            <div class="form-box">
+                <h3>Add Actual Transaction</h3>
+                <form id="txForm">
+                    <div class="form-group"><label>Date</label><input type="date" id="txDate" required></div>
+                    <div class="form-group"><label>Amount (Use negative for expenses)</label><input type="number" step="0.01" id="txAmount" required></div>
+                    <div class="form-group"><label>Description</label><input type="text" id="txDesc"></div>
+                    <button type="submit">Save Transaction</button>
+                </form>
+            </div>
+            <div class="form-box">
+                <h3>Add Expected / Recurring</h3>
+                <form id="rtxForm">
+                    <div class="form-group"><label>Name</label><input type="text" id="rtxName" required></div>
+                    <div class="form-group"><label>Amount (Use negative for expenses)</label><input type="number" step="0.01" id="rtxAmount" required></div>
+                    <div class="form-group"><label>Day of Month (1-31)</label><input type="number" min="1" max="31" id="rtxDay" required></div>
+                    <button type="submit">Save Recurring Event</button>
+                </form>
+            </div>
+        </div>
+
+
+        <div class="form-box" style="margin-top: 20px; width: 100%; box-sizing: border-box;">
+            <h3>Manage Recurring Rules</h3>
+            <table style="width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ccc;">
+                        <th style="padding: 8px;">Name</th>
+                        <th style="padding: 8px;">Amount</th>
+                        <th style="padding: 8px;">Day of Month</th>
+                        <th style="padding: 8px;">Status</th>
+                        <th style="padding: 8px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rtxTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var currentAccountId = {{ account_id }};
+        var isEditMode = {{ 'true' if is_edit else 'false' }};
+        var accountSelect = document.getElementById('accountSelect');
+        var calendar;
+
+        // Setup Currency Formatter for the table
+        const tableFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }); 
+        // Note: You can make 'USD' dynamic here just like we did for the calendar events if desired.
+
+        // Function to load recurring rules into the table
+        window.loadRecurringRules = function() {
+            fetch('/recurring/account/' + currentAccountId)
+            .then(r => r.json())
+            .then(rules => {
+                const tbody = document.getElementById('rtxTableBody');
+                tbody.innerHTML = '';
+                
+                if (rules.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center; color: #666;">No recurring rules setup for this account.</td></tr>';
+                    return;
+                }
+
+                rules.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = "1px solid #eee";
+                    tr.innerHTML = `
+                        <td style="padding: 8px;">${r.name}</td>
+                        <td style="padding: 8px; color: ${r.amount < 0 ? '#dc3545' : '#28a745'};">${tableFormatter.format(r.amount)}</td>
+                        <td style="padding: 8px;">${r.day_of_month}</td>
+                        <td style="padding: 8px;">
+                            <span style="background: ${r.active ? '#28a745' : '#6c757d'}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
+                                ${r.active ? 'Active' : 'Paused'}
+                            </span>
+                        </td>
+                        <td style="padding: 8px;">
+                            <button onclick="openEditRtxModal(${r.id}, '${r.name.replace(/'/g, "\\'")}', ${r.amount}, ${r.day_of_month}, ${r.active})" style="padding: 4px 8px; font-size: 12px; width: auto; background: #ffc107; color: black;">Edit</button>
+                            <button onclick="deleteRtx(${r.id})" style="padding: 4px 8px; font-size: 12px; width: auto; background: #dc3545;">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        };
+
+        // Call it immediately on load
+        loadRecurringRules();
+
+        // UI function to open the modal
+        window.openEditRtxModal = function(id, name, amount, day, active) {
+            document.getElementById('editRtxId').value = id;
+            document.getElementById('editRtxName').value = name;
+            document.getElementById('editRtxAmount').value = amount;
+            document.getElementById('editRtxDay').value = day;
+            document.getElementById('editRtxActive').checked = active;
+            document.getElementById('editRtxModal').style.display = 'block';
+        };
+
+        // API call to delete a rule
+        window.deleteRtx = function(id) {
+            if(confirm("Are you sure you want to delete this recurring rule? Future projections will be removed.")) {
+                fetch('/recurring/' + id, { method: 'DELETE' })
+                .then(r => {
+                    if (r.ok) {
+                        loadRecurringRules(); // Refresh table
+                        calendar.refetchEvents(); // Refresh calendar to remove projections
+                    } else { alert("Error deleting rule."); }
+                });
+            }
+        };
+
+        // Handle the Edit Form Submission
+        document.getElementById('editRtxForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('editRtxId').value;
+            const payload = {
+                account: currentAccountId,
+                name: document.getElementById('editRtxName').value,
+                amount: document.getElementById('editRtxAmount').value,
+                day_of_month: parseInt(document.getElementById('editRtxDay').value),
+                active: document.getElementById('editRtxActive').checked
+            };
+
+            fetch('/recurring/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => {
+                if (r.ok) {
+                    document.getElementById('editRtxModal').style.display = 'none';
+                    loadRecurringRules(); // Refresh table
+                    calendar.refetchEvents(); // Refresh calendar to update projections
+                } else { alert("Error updating rule."); }
+            });
+        });
+
+        fetch('/api/accounts').then(r => r.json()).then(accounts => {
+            accountSelect.innerHTML = '';
+            accounts.forEach(account => {
+                var option = document.createElement('option');
+                option.value = account.id;
+                option.textContent = account.name;
+                if (account.id === currentAccountId) option.selected = true;
+                accountSelect.appendChild(option);
+            });
+        });
+
+        accountSelect.addEventListener('change', function() {
+            if (this.value) {
+                var editParam = isEditMode ? '?edit=true' : '';
+                window.location.href = '/calendar/' + this.value + editParam;
+            }
+        });
+
+        var calendarEl = document.getElementById('calendar');
+        calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' },
+          events: '/api/calendar-events/' + currentAccountId,
+          eventOrder: 'sortOrder',
+
+          // Format the text inside the calendar block
+          eventContent: function(arg) {
+            const props = arg.event.extendedProps;
+            let titleText = arg.event.title;
+            const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: props.currency || 'USD' });
+            
+            if (props.type === 'eod') {
+                titleText = 'EOD: ' + formatter.format(props.amount);
+            } else if (props.type === 'TX' || props.type === 'EXP') {
+                // Format individual transactions neatly: "Rent: $1,200.00"
+                titleText = props.desc + ': ' + formatter.format(props.amount);
+            }
+            
+            return { html: `<b>${titleText}</b>` };
+          },
+
+          // Add mouse-over tooltips after the event is drawn
+          eventDidMount: function(info) {
+             const props = info.event.extendedProps;
+             if (props.type === 'EXP') {
+                 info.el.title = "Expected/Unconfirmed";
+             } else if (props.type === 'TX') {
+                 info.el.title = "Confirmed transaction";
+             } else if (props.type === 'eod') {
+                 info.el.title = "End of Day Balance";
+             }
+          },
+
+          // Handle clicking on a transaction
+          eventClick: function(info) {
+             if (!isEditMode) return;
+
+             var props = info.event.extendedProps;
+             if (props.type === 'eod') return;
+
+             var d = info.event.start;
+             var dateStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+
+             document.getElementById('editType').value = props.type;
+             document.getElementById('editDate').value = dateStr;
+             document.getElementById('editAmount').value = props.amount;
+             document.getElementById('editDesc').value = props.desc;
+
+             // Toggle the Delete button visibility
+             var deleteBtn = document.getElementById('deleteBtn');
+
+             if (props.type === 'TX') {
+                 document.getElementById('modalTitle').innerText = 'Edit Transaction';
+                 document.getElementById('editTxId').value = props.id;
+                 document.getElementById('editRecurringTxId').value = '';
+                 deleteBtn.style.display = 'block'; // Show delete for actuals
+             } else if (props.type === 'EXP') {
+                 document.getElementById('modalTitle').innerText = 'Confirm Expected Transaction';
+                 document.getElementById('editTxId').value = '';
+                 document.getElementById('editRecurringTxId').value = props.recurring_tx_id;
+                 deleteBtn.style.display = 'none'; // Hide delete for projections
+             }
+
+             document.getElementById('editModal').style.display = 'block';
+          }
+        });
+        calendar.render();
+
+        // Handle the Modal Form Submission
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var txType = document.getElementById('editType').value;
+            var payload = {
+                account: currentAccountId,
+                date: document.getElementById('editDate').value,
+                amount: document.getElementById('editAmount').value,
+                description: document.getElementById('editDesc').value,
+                recurring_tx: document.getElementById('editRecurringTxId').value ? parseInt(document.getElementById('editRecurringTxId').value) : null
+            };
+
+            if (txType === 'TX') {
+                // Update existing transaction
+                var txId = document.getElementById('editTxId').value;
+                fetch('/transactions/' + txId, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
+                .then(r => { if(r.ok) { document.getElementById('editModal').style.display='none'; calendar.refetchEvents(); } else alert("Error updating"); });
+            } else if (txType === 'EXP') {
+                // Convert expected to actual transaction (creates new)
+                fetch('/transactions/', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)})
+                .then(r => { if(r.ok) { document.getElementById('editModal').style.display='none'; calendar.refetchEvents(); } else alert("Error saving"); });
+            }
+        });
+
+        // Handle the Delete Button Click
+        document.getElementById('deleteBtn').addEventListener('click', function() {
+            var txId = document.getElementById('editTxId').value;
+            if (!txId) return;
+
+            if (confirm("Are you sure you want to delete this transaction? This action cannot be undone.")) {
+                fetch('/transactions/' + txId, { 
+                    method: 'DELETE' 
+                })
+                .then(r => { 
+                    if(r.ok) { 
+                        document.getElementById('editModal').style.display = 'none'; 
+                        calendar.refetchEvents(); 
+                    } else { 
+                        alert("Error deleting transaction"); 
+                    } 
+                });
+            }
+        });
+
+        document.getElementById('txForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var payload = {
+                account: currentAccountId, date: document.getElementById('txDate').value,
+                amount: document.getElementById('txAmount').value, description: document.getElementById('txDesc').value
+            };
+            fetch('/transactions/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            .then(r => { if(r.ok) { this.reset(); calendar.refetchEvents(); } else alert("Error"); });
+        });
+
+        document.getElementById('rtxForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var payload = {
+                account: currentAccountId, name: document.getElementById('rtxName').value,
+                amount: document.getElementById('rtxAmount').value, day_of_month: parseInt(document.getElementById('rtxDay').value)
+            };
+            fetch('/recurring/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            .then(r => { if(r.ok) { this.reset(); calendar.refetchEvents(); loadRecurringRules(); } else alert("Error"); });
+        });
+
+        // Reconcile Button Logic (Only rendered if in edit mode)
+        {% if is_edit %}
+        var reconBtn = document.getElementById('reconBtn');
+        if (reconBtn) {
+            reconBtn.addEventListener('click', function() {
+                // Get today's date in YYYY-MM-DD format for the default prompt value
+                var today = new Date().toISOString().split('T')[0];
+                var reconDate = prompt("Enter the date you have reconciled this account up to (YYYY-MM-DD):", today);
+                
+                if (reconDate) {
+                    var payload = {
+                        account: currentAccountId,
+                        date: reconDate
+                    };
+
+                    fetch('/recon/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(r => {
+                        if (r.ok) {
+                            alert("Account successfully reconciled up to " + reconDate + "!");
+                            calendar.refetchEvents(); // Redraw calendar to clear out old projections
+                        } else {
+                            alert("Error saving reconciliation.");
+                        }
+                    });
+                }
+            });
+        }
+        {% endif %}
+      });
+    </script>
+</body>
+</html>
